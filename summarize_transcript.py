@@ -84,7 +84,10 @@ def generate_summary(data: TranscriptData, max_length: int = 10000) -> str:
     try:
         full_response = []
         
-        with Live(console=console, refresh_per_second=4) as live:
+        with Live(console=console, refresh_per_second=10) as live:
+            # Show a spinner while waiting for the first chunk
+            live.update(Panel("[bold yellow]⚙️ AI is thinking...[/bold yellow]\n[dim]Analyzing transcript and generating summary...[/dim]", title=f"🚀 {service.upper()} Analysis", border_style="yellow"))
+            
             if service == ServiceName.OLLAMA:
                 client = ollama.Client(host=url)
                 response = client.generate(model=model, prompt=prompt, stream=True)
