@@ -1,29 +1,39 @@
-import uvicorn
-from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
-from transcription import transcribe_audio_video
-from youtube import check_youtube_transcript
+import sys
+from utils import sanitize_url, is_valid_youtube_url, extract_video_id
 
-app = FastAPI()
 
-class TranscriptionRequest(BaseModel):
-    url: str
-
-@app.post("/transcribe")
-def transcribe(request: TranscriptionRequest):
+def check_transcript_availability(video_id: str) -> bool:
+    """Check if a transcript is listed for the video."""
+    from youtube_transcript_api import YouTubeTranscriptApi
+    from youtube_transcript_api._errors import NoTranscriptFound, TranscriptsDisabled
+    
     try:
-        transcription = transcribe_audio_video(request.url)
-        return {"transcription": transcription}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        api = YouTubeTranscriptApi()
+        api.list(video_id)
+        return True
+    except (NoTranscriptFound, TranscriptsDisabled, Exception):
+        return False
 
-@app.get("/youtube/transcript")
-def youtube_transcript(url: str):
-    try:
-        has_transcript = check_youtube_transcript(url)
-        return {"has_transcript": has_transcript}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+
+def main():
+    if len(sys.argv) < 2:
+        print("Usage: python main.py <URL>", file=sys.stderr)
+        sys.exit(1)
+    
+    url = sanitize_url(sys.argv[1])
+    if not is_valid_youtube_url(url):
+        print(f"❌ Invalid YouTube URL", file=sys.stderr)
+        sys.exit(1)
+    
+    video_id = extract_video_id(url)
+    if check_transcript_availability(video_id):
+        # Output URL to stdout for piping
+        print(url)
+        sys.exit(0)
+    else:
+        print(f"⚠️  Transcript disabled or unavailable for: {video_id}", file=sys.stderr)
+        sys.exit(1)
+
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    main()
