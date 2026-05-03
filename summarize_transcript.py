@@ -82,11 +82,12 @@ def generate_summary(data: TranscriptData, max_length: int = 10000) -> str:
     """
 
     try:
+        from rich.markdown import Markdown
         full_response = []
         
         with Live(console=console, refresh_per_second=10) as live:
-            # Show a spinner while waiting for the first chunk
-            live.update(Panel("[bold yellow]⚙️ AI is thinking...[/bold yellow]\n[dim]Analyzing transcript and generating summary...[/dim]", title=f"🚀 {service.upper()} Analysis", border_style="yellow"))
+            # Show a simple status while waiting for the first chunk
+            live.update("[bold yellow]⚙️ AI is thinking...[/bold yellow] [dim]Analyzing transcript...[/dim]")
             
             if service == ServiceName.OLLAMA:
                 client = ollama.Client(host=url)
@@ -94,7 +95,7 @@ def generate_summary(data: TranscriptData, max_length: int = 10000) -> str:
                 for chunk in response:
                     content = chunk.get('response', '')
                     full_response.append(content)
-                    live.update(Panel("".join(full_response), title=f"🚀 {service.upper()} Analysis", subtitle=f"Streaming from {url}", border_style="green"))
+                    live.update(Markdown("".join(full_response)))
             
             elif service == ServiceName.LM_STUDIO:
                 # LM Studio uses OpenAI compatible chat completions
@@ -113,7 +114,7 @@ def generate_summary(data: TranscriptData, max_length: int = 10000) -> str:
                                 chunk_data = json.loads(line[6:])
                                 content = chunk_data["choices"][0]["delta"].get("content", "")
                                 full_response.append(content)
-                                live.update(Panel("".join(full_response), title="🚀 LM Studio Analysis", subtitle=f"Streaming from {url}", border_style="green"))
+                                live.update(Markdown("".join(full_response)))
                             except:
                                 continue
 
@@ -131,13 +132,17 @@ def generate_summary(data: TranscriptData, max_length: int = 10000) -> str:
                             chunk_data = json.loads(clean_line)
                             content = chunk_data["candidates"][0]["content"]["parts"][0]["text"]
                             full_response.append(content)
-                            live.update(Panel("".join(full_response), title="🚀 Gemini Analysis", subtitle="Cloud Stream", border_style="blue"))
+                            live.update(Markdown("".join(full_response)))
                         except:
                             continue
             else:
                 return f"❌ Service {service} not yet fully implemented for streaming."
             
-        return "".join(full_response)
+        # Final clean print for easy copying
+        final_md = "".join(full_response)
+        console.print("\n---")
+        console.print(Markdown(final_md))
+        return final_md
         
     except Exception as e:
         console.print(f"❌ {service.upper()} Error: {e}", style="bold red")
