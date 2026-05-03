@@ -212,6 +212,8 @@ class ConfiguratorApp(App):
             # Only notify on explicit discovery or long enough URL
             if len(url) > 15:
                 self.notify(f"Connection failed: {e}", severity="warning")
+            if self.service == ServiceName.OLLAMA:
+                self.notify("💡 Tip: Ensure 'ollama serve' is running and you have pulled models.", severity="information", timeout=6)
 
         if models:
             select.set_options(models)
@@ -221,7 +223,10 @@ class ConfiguratorApp(App):
             self.notify(f"Found {len(models)} models from {self.service}", severity="information")
         else:
             select.set_options([])
-            select.prompt = "No models found"
+            if self.service == ServiceName.OLLAMA:
+                select.prompt = "No models found (Is Ollama running?)"
+            else:
+                select.prompt = "No models found"
             select.disabled = True
             select.refresh()
 
