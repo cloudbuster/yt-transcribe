@@ -1,11 +1,16 @@
 #!/usr/bin/env python3
 import subprocess
 import sys
+import os
 from utils import sanitize_url, is_valid_youtube_url, extract_video_id
 from rich.console import Console
 from rich.panel import Panel
 
 console = Console()
+error_console = Console(stderr=True)
+
+# Determine the null device based on the operating system
+NULL_DEVICE = "NUL" if os.name == "nt" else "/dev/null"
 
 def main():
     if len(sys.argv) < 2:
@@ -35,7 +40,7 @@ def main():
         download_cmd += " --markdown"
 
     full_cmd = (
-        f'uv run yt-check "{url}" 2>/dev/null | '
+        f'uv run yt-check "{url}" 2>{NULL_DEVICE} | '
         f'{download_cmd} | '
         f'uv run yt-summarize'
     )
@@ -44,7 +49,7 @@ def main():
         result = subprocess.run(full_cmd, shell=True, check=True)
         sys.exit(result.returncode)
     except subprocess.CalledProcessError:
-        console.print("\n[bold red]❌ Pipeline failed.[/bold red] [dim]Check if transcript is enabled in Studio.[/dim]", file=sys.stderr)
+        error_console.print("\n[bold red]❌ Pipeline failed.[/bold red] [dim]Check if transcript is enabled in Studio.[/dim]")
         sys.exit(1)
 
 if __name__ == "__main__":
